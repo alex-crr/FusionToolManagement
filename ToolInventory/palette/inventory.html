@@ -94,6 +94,7 @@
   }
   tbody tr.group:hover { background: var(--bg-raised); }
   td.num { text-align: right; }
+  td.id { white-space: nowrap; }
   .status { font-weight: 600; white-space: nowrap; }
   .status.ok { color: var(--ok); }
   .status.low { color: var(--low); }
@@ -219,7 +220,7 @@
     else if (row.status === 'UNSTOCKED') { tr.className = 'unstocked'; }
     var statusText = { OK: '✓ OK', LOW: '⚠ Low', UNSTOCKED: '– Unstocked' }[row.status];
     var cells = [
-      [displayId(row), '', row.tool_id],
+      [displayId(row), 'id', row.tool_id],
       [row.name, '', ''],
       [row.type, '', ''],
       [row.diameter_mm === null ? '—' : row.diameter_mm, 'num', ''],

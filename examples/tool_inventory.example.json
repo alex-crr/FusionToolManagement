@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "last_updated": "2026-10-05T12:00:00Z",
+  "last_updated_by": "example",
+  "tools": {
+    "924c0897-1231-449a-829c-313244345180": {
+      "on_hand": 4,
+      "min_stock": 2
+    },
+    "9c2434d6-e5c3-4d5b-a59a-d4a9d0a5048a": {
+      "on_hand": 1,
+      "min_stock": 2
+    },
+    "b770aa90-6d15-4c4e-8cc9-268273c2fbff": {
+      "on_hand": 2,
+      "min_stock": 1
+    },
+    "6be83354-f2b3-4307-84cf-7b568e8e6faa": {
+      "on_hand": 3,
+      "min_stock": 1
+    },
+    "95fcff66-81a7-4738-8d0d-aea8688b53d8": {
+      "on_hand": 0,
+      "min_stock": 2
+    },
+    "33cbb526-cc3f-446d-88e8-d59b80ea57ca": {
+      "on_hand": 5,
+      "min_stock": 2
+    },
+    "791f2a8d-1510-4917-8055-9e5885360c99": {
+      "on_hand": 2,
+      "min_stock": 1
+    }
+  }
+}

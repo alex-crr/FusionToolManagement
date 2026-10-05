@@ -57,3 +57,13 @@ dialog, right-click the library → Export.)
 - **CSV scope (Q4):** exports *all* library tools; tools without a recorded
   count export as `on_hand = 0`.
 - **LOW status:** strictly below minimum (`on_hand < min_stock`).
+
+## Try it with the example data
+
+`examples/` holds a small Haas tool library (8 tools) and a matching inventory file:
+
+1. In Fusion, open **Manufacture > Manage > Tool Library**, right-click **Local**, choose **Import Libraries**, and pick `examples/Haas_Example_Library.json`. Name it `Haas Example`.
+2. Open **Tool Inventory Settings**, choose **Haas Example** as the tool library, and set the inventory path to `examples/tool_inventory.example.json`.
+3. Click **View Inventory**. The example shows OK, Low (at or below minimum stock) and Unstocked (never counted) rows.
+
+Tool data comes from the Haas Tooling library for Fusion. Counts are made up.
