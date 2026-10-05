@@ -6,12 +6,15 @@ Only "View Inventory" is promoted; Export and Settings sit in the panel's
 expand/overflow flyout. (CAMManagePanel is shared, so they also show in the
 Utilities tab's Manage panel - same as the native Tool Library button.)
 """
+import importlib
 import os
+import sys
 import traceback
 
 import adsk.core
 
-from .commands import ExportCSV, InventoryPanel, Settings
+# Command modules are imported on first click, not here: the App Store requires
+# run() to finish in < 5 ms, and importing commands/ + core/ costs more than that.
 
 WORKSPACE_ID = 'CAMEnvironment'
 TAB_ID = 'MillingTab'
@@ -25,14 +28,30 @@ RESOURCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resourc
 # promoted commands that carry an icon resource (Ekins, Autodesk forums).
 _COMMANDS = [
     ('toolInventoryView', 'View Inventory',
-     'Open the tool inventory table.', InventoryPanel, True, 'view'),
+     'Open the tool inventory table.', 'InventoryPanel', True, 'view'),
     ('toolInventoryExport', 'Export to CSV',
-     'Export the joined tool inventory to a CSV file.', ExportCSV, False, 'export'),
+     'Export the joined tool inventory to a CSV file.', 'ExportCSV', False, 'export'),
     ('toolInventorySettings', 'Tool Inventory Settings',
-     'Configure tool library path, inventory path and defaults.', Settings, False, 'settings'),
+     'Configure tool library path, inventory path and defaults.', 'Settings', False, 'settings'),
 ]
 
 _handlers = []
+
+
+class _LazyCreated(adsk.core.CommandCreatedEventHandler):
+    """Imports the command module on first use, then delegates to its handler."""
+
+    def __init__(self, module_name):
+        super().__init__()
+        self._module_name = module_name
+
+    def notify(self, args):
+        try:
+            module = importlib.import_module('.commands.' + self._module_name, __package__)
+            module.CreatedHandler().notify(args)
+        except Exception:
+            adsk.core.Application.get().userInterface.messageBox(
+                'Tool Inventory error:\n' + traceback.format_exc())
 
 
 def run(_context):
@@ -46,7 +65,7 @@ def run(_context):
         for cmd_id, name, tooltip, module, promoted, icon in _COMMANDS:
             cmd_def = ui.commandDefinitions.addButtonDefinition(
                 cmd_id, name, tooltip, os.path.join(RESOURCE_DIR, icon))
-            handler = module.CreatedHandler()
+            handler = _LazyCreated(module)
             cmd_def.commandCreated.add(handler)
             _handlers.append(handler)
             if panel.controls.itemById(anchor):
@@ -75,7 +94,13 @@ def stop(_context):
 
 def _cleanup(ui):
     """Remove our controls, command defs and palette - safe to call repeatedly."""
-    InventoryPanel.stop(ui)
+    panel_module = sys.modules.get(__package__ + '.commands.InventoryPanel')
+    if panel_module:
+        panel_module.stop(ui)  # also clears its handler list
+    else:
+        palette = ui.palettes.itemById('toolInventoryPalette')
+        if palette:
+            palette.deleteMe()
     ws = ui.workspaces.itemById(WORKSPACE_ID)
     if ws:
         panel = _existing_panel(ws, TAB_ID, PANEL_ID)
