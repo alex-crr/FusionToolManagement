@@ -23,7 +23,7 @@ BUNDLE = os.path.join(DIST, 'ADSK.FusionToolManagement.ToolInventory.bundle')
 
 VENDOR = 'Alexandre Courrieu'
 VENDOR_URL = 'https://github.com/alex-crr/FusionToolManagement'
-VENDOR_EMAIL = 'alexandre@courrieu.com'
+VENDOR_EMAIL = 'alexandre@courri.eu'
 UPGRADE_CODE = '{8F3A1C92-6E0D-4B7A-9C24-1D5E7F2A8B36}'  # STABLE - never change
 
 # User data / dev artefacts that must not ship in the distributed bundle.
