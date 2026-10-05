@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Fusion 360 dark UI theme. ponytail: dark only - mirrors the default
+     Fusion appearance; no light-theme switch until someone needs it. */
+  :root {
+    --bg: #2b2b2b;
+    --bg-raised: #333333;
+    --bg-header: #383838;
+    --bg-hover: #3a4654;
+    --border: #4a4a4a;
+    --border-strong: #565656;
+    --text: #dcdcdc;
+    --text-muted: #8f8f8f;
+    --input-bg: #1f1f1f;
+    --accent: #0696d7;
+    --accent-hover: #0784bd;
+    --ok: #5bb35e;
+    --low: #e6912c;
+    --unstocked: #8f8f8f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 2;
+  }
+  .toolbar input[type="text"] {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    background: var(--input-bg);
+    color: var(--text);
+  }
+  .toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  button {
+    padding: 5px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    background: var(--bg-header);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { background: #424242; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-hover); }
+  #message {
+    margin: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--low);
+    background: rgba(230, 145, 44, 0.12);
+    border-radius: 3px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--border-strong);
+    background: var(--bg-header);
+    position: sticky;
+    top: 41px;
+    z-index: 1;
+    white-space: nowrap;
+  }
+  tbody td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--bg-hover); }
+  tbody tr.group { cursor: default; }
+  tbody tr.group td {
+    background: var(--bg-raised);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  tbody tr.group:hover { background: var(--bg-raised); }
+  td.num { text-align: right; }
+  .status { font-weight: 600; white-space: nowrap; }
+  .status.ok { color: var(--ok); }
+  .status.low { color: var(--low); }
+  .status.unstocked { color: var(--unstocked); }
+  tr.low td { background: rgba(230, 145, 44, 0.10); }
+  tr.unstocked td { color: var(--text-muted); }
+  #footer { padding: 8px; color: var(--text-muted); }
+  .hidden { display: none !important; }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .dialog {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 16px 20px;
+    min-width: 280px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .dialog h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dialog label { display: block; margin-bottom: 10px; }
+  .dialog input {
+    width: 100%;
+    margin-top: 3px;
+    padding: 5px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    background: var(--input-bg);
+    color: var(--text);
+  }
+  .hint { color: var(--text-muted); font-size: 11px; margin: -6px 0 10px; }
+  #modalError { color: #ef5350; margin-bottom: 10px; min-height: 1em; }
+  .buttons { display: flex; justify-content: flex-end; gap: 8px; }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <input id="filter" type="text" placeholder="Filter by tool ID or name...">
+    <label><input id="groupBy" type="checkbox" checked> Group by type</label>
+    <button id="refreshBtn" title="Re-read library and inventory from disk">Refresh</button>
+  </div>
+  <div id="message" class="hidden"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tool ID</th><th>Name</th><th>Type</th><th>Diameter (mm)</th>
+        <th>On Hand</th><th>Min Stock</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="footer"></div>
+
+  <div id="modal" class="overlay hidden">
+    <div class="dialog">
+      <h3 id="modalTitle"></h3>
+      <label>On Hand
+        <input id="editOnHand" type="number" min="-1" step="1">
+      </label>
+      <div class="hint">-1 = unstocked · 0 = none / in machine · 1+ = in the boxes</div>
+      <label>Min Stock
+        <input id="editMinStock" type="number" min="0" step="1">
+      </label>
+      <div id="modalError"></div>
+      <div class="buttons">
+        <button id="cancelBtn">Cancel</button>
+        <button id="saveBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var state = { rows: [], filter: '', editId: null };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Fire-and-forget: replies arrive as pushes through fusionJavaScriptHandler
+  // (returnData/promise results don't reach the page in current Fusion builds).
+  function send(action, data) {
+    if (window.adsk) { adsk.fusionSendData(action, data || ''); }
+  }
+
+  function applyPayload(payload) {
+    if (payload.error) {
+      $('message').textContent = payload.error;
+      $('message').classList.remove('hidden');
+      state.rows = [];
+    } else {
+      $('message').classList.add('hidden');
+      state.rows = payload.rows || [];
+      var parts = [state.rows.length + ' tools' +
+                   (payload.library_name ? ' from "' + payload.library_name + '"' : '')];
+      if (payload.skipped) { parts.push(payload.skipped + ' entries without an ID skipped'); }
+      if (payload.last_updated) {
+        parts.push('inventory last updated ' + payload.last_updated +
+                   (payload.last_updated_by ? ' by ' + payload.last_updated_by : ''));
+      }
+      $('footer').textContent = parts.join(' — ');
+    }
+    render();
+  }
+
+  function displayId(row) {
+    return row.product_id || row.tool_id.slice(0, 8);
+  }
+
+  function buildRow(row) {
+    var tr = document.createElement('tr');
+    if (row.status === 'LOW') { tr.className = 'low'; }
+    else if (row.status === 'UNSTOCKED') { tr.className = 'unstocked'; }
+    var statusText = { OK: '✓ OK', LOW: '⚠ Low', UNSTOCKED: '– Unstocked' }[row.status];
+    var cells = [
+      [displayId(row), '', row.tool_id],
+      [row.name, '', ''],
+      [row.type, '', ''],
+      [row.diameter_mm === null ? '—' : row.diameter_mm, 'num', ''],
+      [row.on_hand, 'num', ''],
+      [row.min_stock, 'num', ''],
+      [statusText, 'status ' + row.status.toLowerCase(), '']
+    ];
+    cells.forEach(function (cell) {
+      var td = document.createElement('td');
+      td.textContent = cell[0];
+      if (cell[1]) { td.className = cell[1]; }
+      if (cell[2]) { td.title = cell[2]; }
+      tr.appendChild(td);
+    });
+    tr.addEventListener('click', function () { openModal(row); });
+    return tr;
+  }
+
+  function byDiameterThenName(a, b) {
+    var da = a.diameter_mm === null ? Infinity : a.diameter_mm;
+    var db = b.diameter_mm === null ? Infinity : b.diameter_mm;
+    return (da - db) || a.name.localeCompare(b.name);
+  }
+
+  function titleCase(s) {
+    return s.replace(/\w\S*/g, function (w) {
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    });
+  }
+
+  function render() {
+    var tbody = $('rows');
+    tbody.innerHTML = '';
+    var needle = state.filter.toLowerCase();
+    var visible = state.rows.filter(function (row) {
+      return !needle ||
+        row.tool_id.toLowerCase().indexOf(needle) >= 0 ||
+        row.product_id.toLowerCase().indexOf(needle) >= 0 ||
+        row.name.toLowerCase().indexOf(needle) >= 0;
+    });
+    if (!$('groupBy').checked) {
+      visible.forEach(function (row) { tbody.appendChild(buildRow(row)); });
+      return;
+    }
+    var groups = {};
+    visible.forEach(function (row) {
+      var key = row.type || 'other';
+      (groups[key] = groups[key] || []).push(row);
+    });
+    Object.keys(groups).sort().forEach(function (type) {
+      var tr = document.createElement('tr');
+      tr.className = 'group';
+      var td = document.createElement('td');
+      td.colSpan = 7;
+      td.textContent = titleCase(type) + ' (' + groups[type].length + ')';
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      groups[type].sort(byDiameterThenName).forEach(function (row) {
+        tbody.appendChild(buildRow(row));
+      });
+    });
+  }
+
+  function openModal(row) {
+    state.editId = row.tool_id;
+    $('modalTitle').textContent = displayId(row) + ' — ' + row.name;
+    $('modalTitle').title = row.name;
+    $('editOnHand').value = row.on_hand;
+    $('editMinStock').value = row.min_stock;
+    $('modalError').textContent = '';
+    $('modal').classList.remove('hidden');
+    $('editOnHand').focus();
+  }
+
+  function closeModal() {
+    state.editId = null;
+    $('modal').classList.add('hidden');
+  }
+
+  function saveEdit() {
+    var onHand = $('editOnHand').value.trim();
+    var minStock = $('editMinStock').value.trim();
+    if (!/^(-1|\d+)$/.test(onHand)) {
+      $('modalError').textContent = 'On Hand must be -1 (unstocked) or a whole number ≥ 0.';
+      return;
+    }
+    if (!/^\d+$/.test(minStock)) {
+      $('modalError').textContent = 'Min Stock must be a whole number ≥ 0.';
+      return;
+    }
+    send('save', JSON.stringify({
+      tool_id: state.editId,
+      on_hand: parseInt(onHand, 10),
+      min_stock: parseInt(minStock, 10)
+    }));
+  }
+
+  function refresh() {
+    send('refresh');
+  }
+
+  $('filter').addEventListener('input', function (e) {
+    state.filter = e.target.value;
+    render();
+  });
+  $('groupBy').addEventListener('change', render);
+  $('refreshBtn').addEventListener('click', refresh);
+  $('saveBtn').addEventListener('click', saveEdit);
+  $('cancelBtn').addEventListener('click', closeModal);
+  $('modal').addEventListener('click', function (e) {
+    if (e.target === this) { closeModal(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeModal(); }
+    if (e.key === 'Enter' && !$('modal').classList.contains('hidden')) { saveEdit(); }
+  });
+
+  // Push channel: Python -> palette. The return value travels back to
+  // Python as a 'response' event, useful for diagnostics.
+  window.fusionJavaScriptHandler = {
+    handle: function (action, data) {
+      try {
+        if (action === 'render') {
+          applyPayload(JSON.parse(data));
+          return 'rendered:' + state.rows.length;
+        }
+        if (action === 'saveResult') {
+          var result = JSON.parse(data);
+          if (result.ok) {
+            closeModal();
+          } else {
+            $('modalError').textContent = result.error || 'Save failed.';
+          }
+          return 'saveResult:' + result.ok;
+        }
+      } catch (err) {
+        $('message').textContent = 'UI error: ' + err;
+        $('message').classList.remove('hidden');
+        return 'error:' + err;
+      }
+      return 'ignored:' + action;
+    }
+  };
+
+  // window.adsk may be injected slightly after page load - poll for it.
+  var initTries = 0;
+  var initTimer = setInterval(function () {
+    initTries++;
+    if (window.adsk) {
+      clearInterval(initTimer);
+      send('ready');
+    } else if (initTries > 100) {
+      clearInterval(initTimer);
+      $('message').textContent = 'Fusion bridge (window.adsk) unavailable.';
+      $('message').classList.remove('hidden');
+    }
+  }, 100);
+</script>
+</body>
+</html>

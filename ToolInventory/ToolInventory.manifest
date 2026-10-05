@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "addin",
+    "id": "b0e6c1aa-3f3e-4a6f-8c52-7c2f6f5d9b41",
+    "author": "Alexandre Courrieu",
+    "description": {
+        "": "Tool Inventory: joins Fusion tool library definitions with shop on-hand counts in one table."
+    },
+    "version": "1.0.0",
+    "runOnStartup": true,
+    "supportedOS": "windows",
+    "editEnabled": false
+}

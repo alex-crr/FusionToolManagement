@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+dist/
+# Local data: real shop counts and machine-specific settings
+tool_inventory.json
+ToolInventory/config.json
+.claude/settings.local.json
