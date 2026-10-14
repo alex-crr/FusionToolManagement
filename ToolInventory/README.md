@@ -64,6 +64,6 @@ dialog, right-click the library → Export.)
 
 1. In Fusion, open **Manufacture > Manage > Tool Library**, right-click **Local**, choose **Import Libraries**, and pick `examples/Haas_Example_Library.json`. Name it `Haas Example`.
 2. Open **Tool Inventory Settings**, choose **Haas Example** as the tool library, and set the inventory path to `examples/tool_inventory.example.json`.
-3. Click **View Inventory**. The example shows OK, Low (at or below minimum stock) and Unstocked (never counted) rows.
+3. Click **View Inventory**. The example shows OK, Low (below minimum stock) and Unstocked (never counted) rows.
 
 Tool data comes from the Haas Tooling library for Fusion. Counts are made up.
