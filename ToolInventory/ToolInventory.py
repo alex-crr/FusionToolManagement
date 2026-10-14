@@ -15,6 +15,9 @@ import adsk.core
 
 # Command modules are imported on first click, not here: the App Store requires
 # run() to finish in < 5 ms, and importing commands/ + core/ costs more than that.
+# Capture the package now: Fusion loads this file as a top-level module named
+# after its path, and clears __package__ once loading is done.
+_PKG = __package__ or __name__
 
 WORKSPACE_ID = 'CAMEnvironment'
 TAB_ID = 'MillingTab'
@@ -47,7 +50,7 @@ class _LazyCreated(adsk.core.CommandCreatedEventHandler):
 
     def notify(self, args):
         try:
-            module = importlib.import_module('.commands.' + self._module_name, __package__)
+            module = importlib.import_module('.commands.' + self._module_name, _PKG)
             module.CreatedHandler().notify(args)
         except Exception:
             adsk.core.Application.get().userInterface.messageBox(
@@ -94,7 +97,7 @@ def stop(_context):
 
 def _cleanup(ui):
     """Remove our controls, command defs and palette - safe to call repeatedly."""
-    panel_module = sys.modules.get(__package__ + '.commands.InventoryPanel')
+    panel_module = sys.modules.get(_PKG + '.commands.InventoryPanel')
     if panel_module:
         panel_module.stop(ui)  # also clears its handler list
     else:
